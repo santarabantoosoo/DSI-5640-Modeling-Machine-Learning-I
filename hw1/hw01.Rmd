@@ -1,0 +1,232 @@
+---
+title: "Homework 1"
+author: Mahmoud Hamza
+date: February 18, 2022  
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library('class')
+library('dplyr')
+
+## load binary classification example data from author website 
+## 'ElemStatLearn' package no longer available
+load(url('https://web.stanford.edu/~hastie/ElemStatLearn/datasets/ESL.mixture.rda'))
+dat <- ESL.mixture
+
+plot_mix_data <- expression({
+  plot(dat$x[,1], dat$x[,2],
+       col=ifelse(dat$y==0, 'blue', 'orange'),
+       pch=20,
+       xlab=expression(x[1]),
+       ylab=expression(x[2]))
+  ## draw Bayes (True) classification boundary
+  prob <- matrix(dat$prob, length(dat$px1), length(dat$px2))
+  cont <- contourLines(dat$px1, dat$px2, prob, levels=0.5)
+  rslt <- sapply(cont, lines, col='purple')
+})
+
+eval(plot_mix_data)
+
+## fit linear classifier
+fit_lc <- function(y, x) {
+  x <- cbind(1, x)
+  beta <- drop(solve(t(x)%*%x)%*%t(x)%*%y)
+}
+
+## make predictions from linear classifier
+predict_lc <- function(x, beta) {
+  cbind(1, x) %*% beta
+}
+## fit model to mixture data and make predictions
+lc_beta <- fit_lc(dat$y, dat$x)
+lc_pred <- predict_lc(dat$xnew, lc_beta)
+
+## reshape predictions as a matrix
+lc_pred <- matrix(lc_pred, length(dat$px1), length(dat$px2))
+contour(lc_pred,
+      xlab=expression(x[1]),
+      ylab=expression(x[2]))
+
+
+## find the contours in 2D space such that lc_pred == 0.5
+lc_cont <- contourLines(dat$px1, dat$px2, lc_pred, levels=0.5)
+
+## plot data and decision surface
+eval(plot_mix_data)
+sapply(lc_cont, lines)
+
+## fit knn classifier
+## use 5-NN to estimate probability of class assignment
+knn_fit <- knn(train=dat$x, test=dat$xnew, cl=dat$y, k=5, prob=TRUE)
+knn_pred <- attr(knn_fit, 'prob')
+knn_pred <- ifelse(knn_fit == 1, knn_pred, 1-knn_pred)
+
+## reshape predictions as a matrix
+knn_pred <- matrix(knn_pred, length(dat$px1), length(dat$px2))
+contour(knn_pred,
+        xlab=expression(x[1]),
+        ylab=expression(x[2]),
+        levels=c(0.2, 0.5, 0.8))
+
+
+## find the contours in 2D space such that knn_pred == 0.5
+knn_cont <- contourLines(dat$px1, dat$px2, knn_pred, levels=0.5)
+
+## plot data and decision surface
+eval(plot_mix_data)
+sapply(knn_cont, lines)
+
+
+## do bootstrap to get a sense of variance in decision surface
+resample <- function(dat) {
+  idx <- sample(1:length(dat$y), replace = T)
+  dat$y <- dat$y[idx]
+  dat$x <- dat$x[idx,]
+  return(dat)
+}
+  
+## plot linear classifier for three bootstraps
+par(mfrow=c(1,3))
+for(b in 1:3) {
+  datb <- resample(dat)
+  ## fit model to mixture data and make predictions
+  lc_beta <- fit_lc(datb$y, datb$x)
+  lc_pred <- predict_lc(datb$xnew, lc_beta)
+  
+  ## reshape predictions as a matrix
+  lc_pred <- matrix(lc_pred, length(datb$px1), length(datb$px2))
+
+  ## find the contours in 2D space such that lc_pred == 0.5
+  lc_cont <- contourLines(datb$px1, datb$px2, lc_pred, levels=0.5)
+  
+  ## plot data and decision surface
+  eval(plot_mix_data)
+  sapply(lc_cont, lines)
+}
+
+## plot 5-NN classifier for three bootstraps
+par(mfrow=c(1,3))
+for(b in 1:3) {
+  datb <- resample(dat)
+  
+  knn_fit <- knn(train=datb$x, test=datb$xnew, cl=datb$y, k=5, prob=TRUE)
+  knn_pred <- attr(knn_fit, 'prob')
+  knn_pred <- ifelse(knn_fit == 1, knn_pred, 1-knn_pred)
+  
+  ## reshape predictions as a matrix
+  knn_pred <- matrix(knn_pred, length(datb$px1), length(datb$px2))
+
+  ## find the contours in 2D space such that knn_pred == 0.5
+  knn_cont <- contourLines(datb$px1, datb$px2, knn_pred, levels=0.5)
+  
+  ## plot data and decision surface
+  eval(plot_mix_data)
+  sapply(knn_cont, lines)
+}
+
+## plot 20-NN classifier for three bootstraps
+par(mfrow=c(1,3))
+for(b in 1:3) {
+  datb <- resample(dat)
+  
+  knn_fit <- knn(train=datb$x, test=datb$xnew, cl=datb$y, k=20, prob=TRUE)
+  knn_pred <- attr(knn_fit, 'prob')
+  knn_pred <- ifelse(knn_fit == 1, knn_pred, 1-knn_pred)
+  
+  ## reshape predictions as a matrix
+  knn_pred <- matrix(knn_pred, length(datb$px1), length(datb$px2))
+  
+  ## find the contours in 2D space such that knn_pred == 0.5
+  knn_cont <- contourLines(datb$px1, datb$px2, knn_pred, levels=0.5)
+  
+  ## plot data and decision surface
+  eval(plot_mix_data)
+  sapply(knn_cont, lines)
+}
+
+```
+
+
+## Assignment 
+
+```{r}
+df <- as.data.frame(cbind(dat$y, dat$x))
+names(df) <- c("y", "x1", "x2")
+
+fit_lc <- function(form, df){
+  lm(formula(form), data = df)
+  }
+
+predict_lc <- function( model,x_new){
+  predict(model, x_new)
+}
+
+## fit model to mixture data and make predictions
+lc_model <- fit_lc(y ~ x1 + x2, df = df)
+lc_pred <- predict_lc(lc_model,dat$xnew)
+
+## reshape predictions as a matrix
+lc_pred <- matrix(lc_pred, length(dat$px1), length(dat$px2))
+contour(lc_pred,
+      xlab=expression(x[1]),
+      ylab=expression(x[2]))
+```
+
+```{r}
+
+## find the contours in 2D space such that lc_pred == 0.5
+lc_cont <- contourLines(dat$px1, dat$px2, lc_pred, levels=0.5)
+
+## plot data and decision surface
+eval(plot_mix_data)
+sapply(lc_cont, lines)
+```
+
+
+## Increasing flexibility
+
+
+```{r}
+
+df$x3 <- df$x1^2
+df$x4 <- df$x2^2
+
+newdata <- as.data.frame(cbind(dat$xnew, dat$xnew[, 1]^2, dat$xnew[, 2]^2))
+
+colnames(newdata) <- c("x1", "x2", "x3", "x4")
+
+
+## fit model to mixture data and make predictions
+# lc_beta <- fit_lc(dat$y, cbind(dat$x, dat$x^2))
+# lc_pred <- predict_lc(lc_beta, dat$xnew)
+
+lc_model <- fit_lc(y ~ x1 + x2+ x3+ x4, df = df)
+lc_pred <- predict_lc(lc_model,newdata)
+
+
+## reshape predictions as a matrix
+lc_pred <- matrix(lc_pred, length(dat$px1), length(dat$px2))
+contour(lc_pred,
+      xlab=expression(x[1]),
+      ylab=expression(x[2]))
+
+```
+```{r}
+## find the contours in 2D space such that lc_pred == 0.5
+lc_cont <- contourLines(dat$px1, dat$px2, lc_pred, levels=0.5)
+
+## plot data and decision surface
+eval(plot_mix_data)
+sapply(lc_cont, lines)
+
+```
+
+This would reduce bias and increase variance. 
+
+
+
