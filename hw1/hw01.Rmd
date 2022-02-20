@@ -228,5 +228,9 @@ sapply(lc_cont, lines)
 
 This would reduce bias and increase variance. 
 
+Bias is how inaccurately the model is predicting on the current data. The higher the bias, the more inaccurate the model. 
+Variance on the other hand measures the variation in model prediciton on different datasets. Thus, a high variance may cause the model to be unable to generalize (produce good prediction) on test set. 
+
+The new model reduces the bias, since it increases the flexibility of the model. It indeed enhances its power of classification. Thus, improving prediction on training dataset. However, this increased flexibility may increase the variance of the model, causing overfitting, where the model prediction power is reduced on the testset
 
 
