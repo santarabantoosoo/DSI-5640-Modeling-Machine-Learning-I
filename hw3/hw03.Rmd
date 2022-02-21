@@ -1,0 +1,222 @@
+---
+title: "Homework 3"
+author: Mahmoud Hamza
+date: February 21, 2022
+output: github_document
+---
+
+```{r}
+library(tidyverse)
+library(glmnet)
+```
+
+
+```{r}
+## load prostate data
+prostate <- 
+  read.table(url(
+    'https://web.stanford.edu/~hastie/ElemStatLearn/datasets/prostate.data'))
+
+## subset to training examples
+prostate_train <- subset(prostate, train==TRUE) %>% 
+  select(-train)
+prostate_test <- subset(prostate, train==FALSE) %>% 
+  select(-train)
+```
+
+## correlation matrix
+
+```{r}
+
+round(cor(prostate_train), 2)
+
+```
+# Lease square regression model 
+
+
+```{r}
+fit <- lm(lcavol ~ ., data = prostate_train)
+
+L2_loss <- function(y, yhat)
+  (y-yhat)^2
+
+error <- function(dat, fit, loss=L2_loss)
+  mean(loss(dat$lcavol, predict(fit, newdata=dat)))
+
+## train_error 
+error(prostate_train, fit)
+
+## testing error
+error(prostate_test, fit)
+
+```
+## Lasso regression
+
+```{r}
+## use glmnet to fit lasso
+## glmnet fits using penalized L2 loss
+## first create an input matrix and output vector
+form  <- lcavol ~  lweight + age + lbph + lcp + pgg45 + lpsa + svi + gleason
+x_inp <- model.matrix(form, data=prostate_train)
+y_out <- prostate_train$lcavol
+fit <- glmnet(x=x_inp, y=y_out, lambda=seq(0.5, 0, -0.05))
+print(fit$beta)
+
+## functions to compute testing/training error with glmnet
+error <- function(dat, fit, lam, form, loss=L2_loss) {
+  x_inp <- model.matrix(form, data=dat)
+  y_out <- dat$lcavol
+  y_hat <- predict(fit, newx=x_inp, s=lam)  ## see predict.elnet
+  mean(loss(y_out, y_hat))
+}
+
+## train_error at lambda=0
+error(prostate_train, fit, lam=0, form=form)
+
+## testing error at lambda=0
+error(prostate_test, fit, lam=0, form=form)
+
+## train_error at lambda=0.03
+error(prostate_train, fit, lam=0.05, form=form)
+
+## testing error at lambda=0.03
+error(prostate_test, fit, lam=0.05, form=form)
+
+## plot path diagram
+plot(x=range(fit$lambda),
+     y=range(as.matrix(fit$beta)),
+     type='n',
+     xlab=expression(lambda),
+     ylab='Coefficients')
+for(i in 1:nrow(fit$beta)) {
+  points(x=fit$lambda, y=fit$beta[i,], pch=19, col='#00000055')
+  lines(x=fit$lambda, y=fit$beta[i,], col='#00000055')
+}
+text(x=0, y=fit$beta[,ncol(fit$beta)], 
+     labels=rownames(fit$beta),
+     xpd=NA, pos=4, srt=45)
+abline(h=0, lty=3, lwd=2)
+```
+```{r}
+
+## compute training and testing errors as function of lambda
+err_train_1 <- sapply(fit$lambda, function(lam) 
+  error(prostate_train, fit, lam, form))
+err_test_1 <- sapply(fit$lambda, function(lam) 
+  error(prostate_test, fit, lam, form))
+
+## plot test/train error
+plot(x=range(fit$lambda),
+     y=range(c(err_train_1, err_test_1)),
+     xlim=rev(range(fit$lambda)),
+     type='n',
+     xlab=expression(lambda),
+     ylab='train/test error')
+points(fit$lambda, err_train_1, pch=19, type='b', col='darkblue')
+points(fit$lambda, err_test_1, pch=19, type='b', col='darkred')
+legend('topright', c('train','test'), lty=1, pch=19,
+       col=c('darkblue','darkred'), bty='n')
+```
+```{r}
+
+colnames(fit$beta) <- paste('lam =', fit$lambda)
+print(fit$beta %>% as.matrix)
+
+```
+
+
+## Ridge regression
+
+```{r}
+## use glmnet to fit ridge
+## glmnet fits using penalized L2 loss
+## first create an input matrix and output vector
+form  <- lcavol ~  lweight + age + lbph + lcp + pgg45 + lpsa + svi + gleason
+x_inp <- model.matrix(form, data=prostate_train)
+y_out <- prostate_train$lcavol
+fit <- glmnet(x=x_inp, y=y_out, lambda=seq(0.5, 0, -0.05), alpha = 0)
+print(fit$beta)
+
+## functions to compute testing/training error with glmnet
+error <- function(dat, fit, lam, form, loss=L2_loss) {
+  x_inp <- model.matrix(form, data=dat)
+  y_out <- dat$lcavol
+  y_hat <- predict(fit, newx=x_inp, s=lam)  ## see predict.elnet
+  mean(loss(y_out, y_hat))
+}
+
+## train_error at lambda=0
+error(prostate_train, fit, lam=0, form=form)
+
+## testing error at lambda=0
+error(prostate_test, fit, lam=0, form=form)
+
+## train_error at lambda=0.03
+error(prostate_train, fit, lam=0.03, form=form)
+
+## testing error at lambda=0.03
+error(prostate_test, fit, lam=0.03, form=form)
+
+
+## train_error at lambda=0.06
+error(prostate_train, fit, lam=0.06, form=form)
+
+## testing error at lambda=0.03
+error(prostate_test, fit, lam=0.06, form=form)
+
+
+## train_error at lambda=0.1
+error(prostate_train, fit, lam=0.1, form=form)
+
+## testing error at lambda=0.03
+error(prostate_test, fit, lam=0.1, form=form)
+
+
+```
+
+
+
+## Train test error as a function of lambda
+
+
+```{r}
+
+## compute training and testing errors as function of lambda
+err_train_1 <- sapply(fit$lambda, function(lam) 
+  error(prostate_train, fit, lam, form))
+err_test_1 <- sapply(fit$lambda, function(lam) 
+  error(prostate_test, fit, lam, form))
+
+## plot test/train error
+plot(x=range(fit$lambda),
+     y=range(c(err_train_1, err_test_1)),
+     xlim=rev(range(fit$lambda)),
+     type='n',
+     xlab=expression(lambda),
+     ylab='train/test error')
+points(fit$lambda, err_train_1, pch=19, type='b', col='darkblue')
+points(fit$lambda, err_test_1, pch=19, type='b', col='darkred')
+legend('topright', c('train','test'), lty=1, pch=19,
+       col=c('darkblue','darkred'), bty='n')
+```
+
+
+## Path diagram for ridge regression analysis
+
+
+```{r}
+# plot path diagram
+plot(x=range(fit$lambda),
+     y=range(as.matrix(fit$beta)),
+     type='n',
+     xlab=expression(lambda),
+     ylab='Coefficients')
+for(i in 1:nrow(fit$beta)) {
+  points(x=fit$lambda, y=fit$beta[i,], pch=19, col='#00000055')
+  lines(x=fit$lambda, y=fit$beta[i,], col='#00000055')
+}
+text(x=0, y=fit$beta[,ncol(fit$beta)],
+     labels=rownames(fit$beta),
+     xpd=NA, pos=4, srt=45)
+abline(h=0, lty=3, lwd=2)
+```
