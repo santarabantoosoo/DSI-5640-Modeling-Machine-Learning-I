@@ -1,0 +1,258 @@
+---
+title: "Homework 4"
+author: Mahmoud Hamza
+date: February 28, 2022
+output: github_document
+---
+
+## curse of dimensionality 
+
+### 4 (a)
+
+p = 1 
+
+fraction = 10% 
+
+### (b)
+
+fraction = 1%
+
+### (c)
+
+```{r}
+(0.1^100) * 100 
+```
+
+(1 * 10^-98) %
+
+
+### (d)
+
+For every additional parameter in nearest neighbor, the space increases exponentially. This means that the number of observations, if they remain constant, would decrease exponentially as well. Thus, with too many predictors as in c, the number of "near" observations would be too low. Thus, it would greatly reduce the prediction accuracy. 
+
+### (e) 
+
+for each scenario, the cube side would be 0.1. However, when p = 1, there is only 1 side. 
+For p = 2, the area would be 0.01. For p = 100, the area would be 0.1 * 100 
+
+
+## 2nd question
+
+```{r}
+library(ISLR2)
+
+data("Weekly")
+```
+
+
+```{r}
+summary(Weekly)
+```
+
+
+```{r}
+cor(Weekly[2:8])
+```
+
+I can't find any strong positive or negarive correlations 
+
+```{r}
+library(corrplot)
+corrplot(cor(Weekly[2:8]), method = 'color', order = 'alphabet')
+
+```
+
+
+```{r}
+library(tidyverse)
+
+
+df <- Weekly %>%
+  select(Year, starts_with('Lag') ) %>%
+  gather(key = "variable", value = "value", -Year)
+
+
+ggplot(df, aes(x = Year, y = value)) + 
+  geom_area(aes(color = variable, linetype = variable)) 
+```
+
+## (b) 
+
+```{r}
+model <- (glm(Direction ~ Lag1 + Lag2 +Lag3 +Lag4 +Lag5 + Volume, data = Weekly, family = "binomial"))
+summary(model)
+```
+
+Lag2 appears to be statistically significant. 
+
+
+## (c)
+```{r}
+library(regclass)
+confusion_matrix(model) 
+  
+```
+accuracy = `r (54+557)/1089 `
+
+The majoriy of mistakes made by the logistic regression are related to stocks that are predicted to be up when in fact they are down. 
+
+
+```{r}
+train <- Weekly %>% 
+  filter(between(Year, 1990, 2008)) 
+
+test <- Weekly %>% 
+  filter(Year > 2008)
+ 
+model2 <- glm(Direction ~ Lag2, data = train, family = "binomial")
+summary(model2)
+
+```
+
+```{r}
+mod2_conf <- confusion_matrix(model2, test) 
+mod2_conf
+```
+
+
+```{r}
+(mod2_conf[1,1] + mod2_conf[2,2] )/ nrow(test)
+
+```
+
+accuracy = `r (mod2_conf[1,1] + mod2_conf[2,2] )/ nrow(test)`
+
+## (e)
+
+```{r}
+library(MASS)
+
+model_lda <- lda(Direction ~ Lag2, data = train)
+
+model_lda
+
+```
+
+```{r}
+
+lda_conf <- table(predict(model_lda,type="class", newdata = test)$class,test$Direction)
+
+lda_conf
+```
+
+```{r}
+sum(diag(lda_conf))/nrow(test)
+```
+
+
+accuracy = `r sum(diag(lda_conf))/nrow(test)
+
+
+## (f) 
+
+
+```{r}
+model_qda <- qda(Direction ~ Lag2, data = train)
+
+model_qda
+
+```
+
+```{r}
+
+qda_conf <- table(predict(model_qda,type="class", newdata = test)$class,test$Direction)
+
+qda_conf
+```
+
+```{r}
+sum(diag(qda_conf))/nrow(test)
+```
+
+
+accuracy = `r sum(diag(qda_conf))/nrow(test)
+
+
+## (g)
+
+```{r}
+library(class)
+
+prediction = knn(data.frame(train$Lag2), data.frame(test$Lag2), train$Direction, k = 1)
+
+knn_conf <- table(prediction, test$Direction)
+```
+
+```{r}
+sum(diag(knn_conf))/nrow(test)
+```
+
+## (h) 
+
+best models: 
+logistic regression and lda 
+They have the highest accuracy. 
+
+
+
+## (i) 
+
+### KNN fine tuning 
+
+
+```{r}
+
+knn_acc_list <- rep(NA, 20)
+knn_tune <- function(k){
+    prediction = knn(data.frame(train$Lag2), data.frame(test$Lag2), train$Direction, k = k)
+  
+    knn_conf <- table(prediction, test$Direction)
+
+    return(sum(diag(knn_conf))/nrow(test))
+
+}
+
+for (i in 1: 20){
+  knn_acc_list[i] <-  knn_tune(i)
+} 
+
+max(knn_acc_list)
+
+```
+The maximum accuracy is 0.596, which is still lower than logistic regression and lda 
+
+### adding other predictors variables
+
+```{r}
+log_tune <- glm(Direction ~ Lag1 + Lag2 +Lag3 +Lag4 +Lag5 , data = train, family = "binomial")
+```
+
+
+```{r}
+mod_log_tune_conf <- confusion_matrix(log_tune, test) 
+
+mod_log_tune_conf
+
+(mod_log_tune_conf[1,1] + mod_log_tune_conf[2,2] )/ nrow(test)
+
+```
+Things are getting worse 
+
+
+### adding interaction terms 
+
+```{r}
+log_tune_int <- glm(Direction ~ Lag1 * Lag2 + Lag2 * Volume , data = train, family = "binomial")
+```
+
+
+```{r}
+mod_log_tune_int_conf <- confusion_matrix(log_tune_int, test) 
+
+mod_log_tune_int_conf
+
+(mod_log_tune_int_conf[1,1] + mod_log_tune_int_conf[2,2] )/ nrow(test)
+
+```
+
+Again things are getting worse
