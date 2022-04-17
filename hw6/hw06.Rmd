@@ -1,0 +1,82 @@
+---
+title: "Hw06"
+author: "Hamza"
+date: "4/17/2022"
+output: github_document
+---
+
+```{r}
+library(scorecardModelUtils)
+library(tidyverse)
+library(randomForest)
+library(mlbench)
+library(caret)
+train <- read.csv('vowel.train' )
+test <- read.csv('vowel.test')
+
+train <- train[,2:ncol(train)]
+
+```
+
+```{r}
+
+train$y <- factor(train$y)
+
+X_train <-train %>% 
+  select(-y)
+y_train <- train$y
+
+X_test <- test %>% 
+  select(-y)
+
+y_test <- test$y
+
+
+basic_model = randomForest(data = train, x = X_train, y_train)
+```
+
+```{r}
+
+for (i in c(1, 5, 10, 20, 40, 80)){
+control <- trainControl(method="repeatedcv", number=5, search="grid")
+
+tunegrid <- expand.grid(.mtry=c(2:6))
+rf_gridsearch <- train(y~., data=train, method="rf", metric= 'Accuracy', tuneGrid=tunegrid, trControl=control, nodesize = i)
+print(rf_gridsearch)
+print("Node size ")
+print (i)
+}
+
+
+```
+
+
+Thus, we go for mtry 2 and nodes 1
+
+```{r}
+# optimized model 
+
+optim_model = randomForest(data = train, x = X_train, y_train, mtry = 2, nodesize = 1, importance=TRUE)
+```
+
+
+## prediction 
+
+```{r}
+
+predict(optim_model, test)
+```
+
+## misclassification rate 
+
+```{r}
+1-mean(margin(optim_model))
+```
+
+```{r}
+prediction_for_table <- predict(optim_model, X_test)
+table(observed= y_test, predicted=prediction_for_table)
+
+
+```
+
