@@ -79,4 +79,3 @@ table(observed= y_test, predicted=prediction_for_table)
 
 
 ```
-

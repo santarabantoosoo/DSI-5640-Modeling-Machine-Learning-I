@@ -52,7 +52,7 @@ kernel_epanechnikov <- function(x, x0, lambda=1) {
 ## x0 - 1 x p input where to make prediction
 ## k  - number of nearest neighbors
 kernel_k_nearest_neighbors <- function(x, x0, k=1) {
-  ## compute distance betwen each x and x0
+  ## compute distance between each x and x0
   z <- t(t(x) - x0)
   d <- sqrt(rowSums(z*z))
 
@@ -137,7 +137,7 @@ bic <- function(y, yhat, d)
 
 ## make predictions using NW method at training inputs
 y_hat <- nadaraya_watson(y.train, x.train, x.train,
-  kernel_epanechnikov, lambda=5)
+  kern = kernel_k_nearest_neighbors, k=5)
 
 ## view kernel (smoother) matrix
 matrix_image(attr(y_hat, 'k'))
@@ -146,7 +146,7 @@ matrix_image(attr(y_hat, 'k'))
 ```{r}
 ## compute effective degrees of freedom
 
-edf <- effective_df(y.train, x.train, kernel_epanechnikov, lambda=5)
+edf <- effective_df(y.train, x.train, kern = kernel_k_nearest_neighbors, k=5)
 aic(y.train, y_hat, edf)
 bic(y.train, y_hat, edf)
 
@@ -160,7 +160,7 @@ x_plot <- matrix(seq(min(x.train),max(x.train),length.out=100),100,1)
 
 ## make predictions using NW method at each of grid points
 y_hat_plot <- nadaraya_watson(y.train, x.train, x_plot,
-  kernel_epanechnikov, lambda=1)
+  kern = kernel_k_nearest_neighbors, k=1)
 
 ## plot predictions
 plot(x.train, y.train, xlab="Time (ms)", ylab="Acceleration (g)")
@@ -200,7 +200,7 @@ x_plot <- matrix(seq(min(x),max(x),length.out=100),100,1)
 
 ## make predictions using NW method at each of grid points
 y_hat_plot <- nadaraya_watson(y.valid, x.valid, x_plot,
-  kernel_epanechnikov, lambda=1)
+  kern = kernel_k_nearest_neighbors, k=1)
 
 ## plot predictions
 plot(x.valid, y.valid, xlab="Time (ms)", ylab="Acceleration (g)")
@@ -247,7 +247,7 @@ for (i in 1:10){
     train.data <- mcycle[split,]
     valid.data <- mcycle[-split,]
     
-    y_hat <- nadaraya_watson(as.matrix(valid.data[,2]), as.matrix(valid.data[,1]),  as.matrix(valid.data[,1]), kernel_epanechnikov, lambda=i)
+    y_hat <- nadaraya_watson(as.matrix(valid.data[,2]), as.matrix(valid.data[,1]),  as.matrix(valid.data[,1]), kern = kernel_k_nearest_neighbors, k=i)
     
     print('#########')
     print(i)
@@ -269,7 +269,7 @@ for (i in 1:10){
     train.data <- mcycle[split,]
     valid.data <- mcycle[-split,]
     
-    y_hat <- nadaraya_watson(as.matrix(valid.data[,2]), as.matrix(valid.data[,1]),  as.matrix(valid.data[,1]), kernel_epanechnikov, lambda=i)
+    y_hat <- nadaraya_watson(as.matrix(valid.data[,2]), as.matrix(valid.data[,1]),  as.matrix(valid.data[,1]), kern = kernel_k_nearest_neighbors, k=i)
     
     print('#########')
     print(i)
@@ -297,7 +297,7 @@ for (i in 1:10){
     train.data <- mcycle[split,]
     valid.data <- mcycle[-split,]
     
-    y_hat <- nadaraya_watson(as.matrix(valid.data[,2]), as.matrix(valid.data[,1]),  as.matrix(valid.data[,1]), kernel_epanechnikov, lambda=i)
+    y_hat <- nadaraya_watson(as.matrix(valid.data[,2]), as.matrix(valid.data[,1]),  as.matrix(valid.data[,1]), kern = kernel_k_nearest_neighbors, k=i)
     
     # print('#########')
     # print(i)
@@ -312,7 +312,7 @@ for (i in 1:10){
 
   }
   x_plot <- seq(1,10,1)
-  plot(x_plot, final_list, ylab = 'test error', xlab = 'lamdba')
+  plot(x_plot, final_list, ylab = 'test error', xlab = 'k')
   for (i in 1:10){
   segments(x_plot[i], final_list[i] - std_dev[i], y1 = final_list[i] + std_dev[i])
   }
@@ -321,7 +321,6 @@ for (i in 1:10){
 plot_cross()
 ```
 
-I would go for lambda = 1 
-However, I know I am doing something wrong but I can't realize what is it. 
+I would go for k = 1 
 
 
