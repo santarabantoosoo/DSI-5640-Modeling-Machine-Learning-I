@@ -323,4 +323,6 @@ plot_cross()
 
 I would go for k = 1 
 
+This is because it has the lowest test error and the next level (k =2) is within one standard deviation from it. 
+
 

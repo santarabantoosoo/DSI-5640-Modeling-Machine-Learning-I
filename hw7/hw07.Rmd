@@ -26,29 +26,29 @@ dat <- mixture.example
 ## create 3D plot of mixture data
 plot_mixture_data <- function(dat=mixture.example, showtruth=FALSE) {
   ## create 3D graphic, rotate to view 2D x1/x2 projection
-  par3d(FOV=1,userMatrix=diag(4))
-  plot3d(dat$xnew[,1], dat$xnew[,2], dat$prob, type="n",
+  #par(FOV=1,userMatrix=diag(4))
+  plot(dat$xnew[,1], dat$xnew[,2], dat$prob, type="n",
          xlab="x1", ylab="x2", zlab="",
          axes=FALSE, box=TRUE, aspect=1)
   ## plot points and bounding box
   x1r <- range(dat$px1)
   x2r <- range(dat$px2)
-  pts <- plot3d(dat$x[,1], dat$x[,2], 1,
+  pts <- plot(dat$x[,1], dat$x[,2], 1,
                 type="p", radius=0.5, add=TRUE,
                 col=ifelse(dat$y, "orange", "blue"))
-  lns <- lines3d(x1r[c(1,2,2,1,1)], x2r[c(1,1,2,2,1)], 1)
+  lns <- lines(x1r[c(1,2,2,1,1)], x2r[c(1,1,2,2,1)], 1)
   
   if(showtruth) {
     ## draw Bayes (True) classification boundary
     probm <- matrix(dat$prob, length(dat$px1), length(dat$px2))
     cls <- contourLines(dat$px1, dat$px2, probm, levels=0.5)
     pls <- lapply(cls, function(p) 
-      lines3d(p$x, p$y, z=1, col='purple', lwd=3))
+      lines(p$x, p$y, z=1, col='purple', lwd=3))
     ## plot marginal probability surface and decision plane
-    sfc <- surface3d(dat$px1, dat$px2, dat$prob, alpha=1.0,
-      color="gray", specular="gray")
-    qds <- quads3d(x1r[c(1,2,2,1)], x2r[c(1,1,2,2)], 0.5, alpha=0.4,
-      color="gray", lit=FALSE)
+    # sfc <- surface3d(dat$px1, dat$px2, dat$prob, alpha=1.0,
+    #   color="gray", specular="gray")
+    # qds <- quads3d(x1r[c(1,2,2,1)], x2r[c(1,1,2,2)], 0.5, alpha=0.4,
+    #   color="gray", lit=FALSE)
   }
 }
 
@@ -66,13 +66,13 @@ plot_nnet_predictions <- function(fit, dat=mixture.example) {
 
   ## plot classification boundary
   pls <- lapply(cls, function(p) 
-    lines3d(p$x, p$y, z=1, col='purple', lwd=2))
+    lines(p$x, p$y, z=1, col='purple', lwd=2))
   
   ## plot probability surface and decision plane
-  sfc <- surface3d(dat$px1, dat$px2, probs, alpha=1.0,
-                   color="gray", specular="gray")
-  qds <- quads3d(x1r[c(1,2,2,1)], x2r[c(1,1,2,2)], 0.5, alpha=0.4,
-                 color="gray", lit=FALSE)
+  # sfc <- surface(dat$px1, dat$px2, probs, alpha=1.0,
+  #                  color="gray", specular="gray")
+  # qds <- quads(x1r[c(1,2,2,1)], x2r[c(1,1,2,2)], 0.5, alpha=0.4,
+  #                color="gray", lit=FALSE)
 }
 
 ## plot data and 'true' probability surface
