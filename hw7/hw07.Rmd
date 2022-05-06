@@ -22,65 +22,60 @@ library('nnet')
 
 load("mixture.example.RData")
 dat <- mixture.example
+ddat <- data.frame(y=dat$y, x1=dat$x[,1], x2=dat$x[,2])
 
 
 
 ## create 3D plot of mixture data
 plot_mixture_data <- function(dat=mixture.example, showtruth=FALSE) {
-  ## create 3D graphic, rotate to view 2D x1/x2 projection
-  #par(FOV=1,userMatrix=diag(4))
-  plot(dat$xnew[,1], dat$xnew[,2], dat$prob, type="n",
-         xlab="x1", ylab="x2", zlab="",
-         axes=FALSE, box=TRUE, aspect=1)
-  ## plot points and bounding box
-  x1r <- range(dat$px1)
-  x2r <- range(dat$px2)
-  pts <- plot(dat$x[,1], dat$x[,2], 1,
-                type="p", radius=0.5, add=TRUE,
-                col=ifelse(dat$y, "orange", "blue"))
-  lns <- lines(x1r[c(1,2,2,1,1)], x2r[c(1,1,2,2,1)], 1)
+  plot(dat$xnew[,1], dat$xnew[,2], type = 'n',
+       xlab="x1", ylab="x2",
+       axes=FALSE )
 
-  if(showtruth) {
-    ## draw Bayes (True) classification boundary
-    probm <- matrix(dat$prob, length(dat$px1), length(dat$px2))
-    cls <- contourLines(dat$px1, dat$px2, probm, levels=0.5)
-    pls <- lapply(cls, function(p)
-      lines(p$x, p$y, z=1, col='purple', lwd=3))
-    ## plot marginal probability surface and decision plane
-    # sfc <- surface3d(dat$px1, dat$px2, dat$prob, alpha=1.0,
-    #   color="gray", specular="gray")
-    # qds <- quads3d(x1r[c(1,2,2,1)], x2r[c(1,1,2,2)], 0.5, alpha=0.4,
-    #   color="gray", lit=FALSE)
-  }
+## plot points and bounding box
+x1r <- range(dat$px1)
+x2r <- range(dat$px2)
+pts <- plot(dat$x[,1], dat$x[,2], 
+              type="p",
+              col=ifelse(dat$y, "orange", "blue"))
+lns <- lines(x1r[c(1,2,2,1,1)], x2r[c(1,1,2,2,1)])
+
+## draw Bayes (True) classification boundary in blue
+dat$probm <- with(dat, matrix(prob, length(px1), length(px2)))
+dat$cls <- with(dat, contourLines(px1, px2, probm, levels=0.5))
+pls0 <- lapply(dat$cls, function(p) lines(p$x, p$y, color="blue"))
+
+## compute probabilities plot classification boundary
+## associated with local linear logistic regression
+probs.loc <- 
+  apply(dat$xnew, 1, function(x0) {
+    ## smoothing parameter
+    l <- 1/2
+    ## compute (Gaussian) kernel weights
+    d <- colSums((rbind(ddat$x1, ddat$x2) - x0)^2)
+    k <- exp(-d/2/l^2)
+    ## local fit at x0
+    fit <- suppressWarnings(glm(y ~ x1 + x2, data=ddat, weights=k,
+                                family=binomial(link="logit")))
+    ## predict at x0
+    as.numeric(predict(fit, type="response", newdata=as.data.frame(t(x0))))
+  })
+
+dat$probm.loc <- with(dat, matrix(probs.loc, length(px1), length(px2)))
+dat$cls.loc <- with(dat, contourLines(px1, px2, probm.loc, levels=0.5))
+pls <- lapply(dat$cls.loc, function(p) lines3d(p$x, p$y,))
+
+## plot probability surface and decision plane
+sfc <- surface3d(dat$px1, dat$px2, probs.loc, alpha=1.0,
+                 color="gray", specular="gray")
+qds <- quads3d(x1r[c(1,2,2,1)], x2r[c(1,1,2,2)], 0.5, alpha=0.4,
+               color="gray", lit=FALSE)
 }
 
-# ## compute and plot predictions
-# plot_nnet_predictions <- function(fit, dat=mixture.example) {
-#   
-#   ## create figure
-#   plot_mixture_data()
-# 
-#   ## compute predictions from nnet
-#   preds <- predict(fit, dat$xnew, type="class")
-#   probs <- predict(fit, dat$xnew, type="raw")[,1]
-#   probm <- matrix(probs, length(dat$px1), length(dat$px2))
-#   cls <- contourLines(dat$px1, dat$px2, probm, levels=0.5)
-# 
-#   ## plot classification boundary
-#   pls <- lapply(cls, function(p) 
-#     lines(p$x, p$y, z=1, col='purple', lwd=2))
-#   
-#   ## plot probability surface and decision plane
-#   # sfc <- surface(dat$px1, dat$px2, probs, alpha=1.0,
-#   #                  color="gray", specular="gray")
-#   # qds <- quads(x1r[c(1,2,2,1)], x2r[c(1,1,2,2)], 0.5, alpha=0.4,
-#   #                color="gray", lit=FALSE)
-# }
-
-plot_nnet_preds <- function(fit, dat=mixture.example) {
+plot_nnet_predictions <- function(fit, dat=mixture.example) {
   
   ## create figure
-  eval(plot_mixture_data)
+  plot_mixture_data()
 
   ## compute predictions from nnet
   probs <- predict(fit, dat$xnew, type="raw")[,1]
@@ -92,7 +87,7 @@ plot_nnet_preds <- function(fit, dat=mixture.example) {
 
 
 ## plot data and 'true' probability surface
-#plot_mixture_data(showtruth=TRUE)
+plot_mixture_data(showtruth=TRUE)
 ```
 
 ## fit single hidden layer, fully connected NN 
@@ -113,25 +108,25 @@ plot_nnet_predictions(fit)
 
 ```{r}
 
-#length(fit$wts)
+length(fit$wts)
 
-## 3 hidden nodes
-# nnet(x=dat$x, y=dat$y, size=3, entropy=TRUE, decay=0) %>%
-#   plot_nnet_predictions
+# 3 hidden nodes
+ nnet(x=dat$x, y=dat$y, size=3, entropy=TRUE, decay=0) %>%
+ plot_nnet_predictions
 ```
 
 ```{r}
 
 
-## 10 hidden nodes with weight decay
-# nnet(x=dat$x, y=dat$y, size=10, entropy=TRUE, decay=0.02) %>%
-#   plot_nnet_predictions
+# 10 hidden nodes with weight decay
+nnet(x=dat$x, y=dat$y, size=10, entropy=TRUE, decay=0.02) %>%
+  plot_nnet_predictions
 ```
 
 ```{r}
-## 3 hidden nodes with weight decay
-# nnet(x=dat$x, y=dat$y, size=3, entropy=TRUE, decay=0.02) %>%
-#   plot_nnet_predictions
+# 3 hidden nodes with weight decay
+nnet(x=dat$x, y=dat$y, size=3, entropy=TRUE, decay=0.02) %>%
+  plot_nnet_predictions
 
 ```
 
